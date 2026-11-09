@@ -15,7 +15,11 @@
   h1 { font-size: 26px; margin: 12px 0 16px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
   label { display: block; font-weight: 700; margin-bottom: 8px; }
-  textarea { width: 100%; box-sizing: border-box; min-height: 88px; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font-family: inherit; }
+  .inputrow { display: flex; gap: 10px; align-items: stretch; }
+  textarea { flex: 1; min-width: 0; box-sizing: border-box; min-height: 88px; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font-family: inherit; }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .icon { width: 52px; min-width: 52px; flex: none; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+  .icon svg { width: 24px; height: 24px; }
   .btns { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   button { flex: 1; min-width: 140px; font-size: 17px; font-weight: 700; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer; }
   button.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
@@ -31,26 +35,35 @@
 
   <div class="card">
     <label for="input">貼上網址</label>
-    <textarea id="input" placeholder="https://..." inputmode="url"></textarea>
+    <div class="inputrow">
+      <textarea id="input" placeholder="https://..." inputmode="url"></textarea>
+      <div class="side">
+        <button id="paste" type="button" class="icon" aria-label="貼上" title="貼上">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 12h6M9 16h4"/></svg>
+        </button>
+        <button id="copy" type="button" class="icon" aria-label="複製" title="複製">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </button>
+      </div>
+    </div>
     <div class="btns">
-      <button id="addParam" type="button">加參數 openExternalBrowser=1</button>
+      <button id="addParam" type="button">加外部參數</button>
       <button id="shorten" type="button" class="ghost">縮網址</button>
     </div>
     <div id="result" class="result" role="status"></div>
-    <div class="btns">
-      <button id="copy" type="button" class="ghost" style="display:none">複製結果</button>
-    </div>
     <p id="fallback" class="note" style="display:none"></p>
   </div>
 
-  <p class="note">加參數：在網址後面加上 openExternalBrowser=1，讓 LINE 用手機預設瀏覽器開啟。<br>縮網址：使用 TinyURL 服務，網址會送到 TinyURL。</p>
+  <p class="note">加外部參數：在網址後面加上 openExternalBrowser=1，讓 LINE 用手機預設瀏覽器開啟。<br>縮網址：使用 TinyURL 服務，網址會送到 TinyURL。<br>複製：有結果就複製結果，沒有結果就複製輸入的內容。</p>
 </main>
 
 <script>
   const $ = (id) => document.getElementById(id);
+  const input = $('input');
   const resultBox = $('result');
-  const copyBtn = $('copy');
   const fallback = $('fallback');
+  const copyBtn = $('copy');
+  let lastResult = '';
 
   function toUrl(raw) {
     const s = raw.trim().match(/https?:\/\/\S+/)?.[0];
@@ -58,28 +71,57 @@
     try { return new URL(s); } catch { return null; }
   }
 
-  function show(text) {
-    resultBox.textContent = text;
-    resultBox.classList.add('show');
-    copyBtn.style.display = '';
-    copyBtn.dataset.value = text;
-  }
-
   function clearFallback() {
     fallback.style.display = 'none';
     fallback.textContent = '';
   }
 
-  function notValid() {
-    clearFallback();
-    resultBox.classList.remove('show');
-    copyBtn.style.display = 'none';
+  function showFallback(html) {
     fallback.style.display = '';
-    fallback.textContent = '請貼上以 http:// 或 https:// 開頭的完整網址。';
+    fallback.innerHTML = html;
   }
 
+  function show(text) {
+    lastResult = text;
+    resultBox.textContent = text;
+    resultBox.classList.add('show');
+  }
+
+  function clearResult() {
+    lastResult = '';
+    resultBox.textContent = '';
+    resultBox.classList.remove('show');
+  }
+
+  function notValid() {
+    clearFallback();
+    clearResult();
+    showFallback('請貼上以 http:// 或 https:// 開頭的完整網址。');
+  }
+
+  $('paste').addEventListener('click', async () => {
+    try {
+      input.value = await navigator.clipboard.readText();
+      input.focus();
+    } catch {
+      showFallback('無法讀取剪貼簿，請長按輸入框手動貼上。');
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const text = lastResult || input.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.style.borderColor = 'var(--ink)';
+      setTimeout(() => { copyBtn.style.borderColor = ''; }, 800);
+    } catch {
+      showFallback('無法寫入剪貼簿，請長按結果手動複製。');
+    }
+  });
+
   $('addParam').addEventListener('click', () => {
-    const url = toUrl($('input').value);
+    const url = toUrl(input.value);
     if (!url) return notValid();
     url.searchParams.set('openExternalBrowser', '1');
     clearFallback();
@@ -87,7 +129,7 @@
   });
 
   $('shorten').addEventListener('click', async () => {
-    const url = toUrl($('input').value);
+    const url = toUrl(input.value);
     if (!url) return notValid();
     clearFallback();
     show('縮網址中…');
@@ -97,20 +139,8 @@
       if (!res.ok || !text.startsWith('https://tinyurl.com/')) throw new Error('bad response');
       show(text);
     } catch {
-      resultBox.classList.remove('show');
-      copyBtn.style.display = 'none';
-      fallback.style.display = '';
-      fallback.innerHTML = '縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://tinyurl.com/app" target="_blank" rel="noopener">TinyURL 官網</a> 自己縮。';
-    }
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(copyBtn.dataset.value || '');
-      copyBtn.textContent = '已複製';
-      setTimeout(() => { copyBtn.textContent = '複製結果'; }, 1500);
-    } catch {
-      copyBtn.textContent = '複製失敗，請長按結果';
+      clearResult();
+      showFallback('縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://tinyurl.com/app" target="_blank" rel="noopener">TinyURL 官網</a> 自己縮。');
     }
   });
 </script>
