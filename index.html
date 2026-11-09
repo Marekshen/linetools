@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小工具庫</title>
+<style>
+  :root { --bg: #f4f6f9; --card: #fff; --ink: #2b1d0e; --muted: #6b5a48; --accent: #12355b; --line: #d6dde6; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #14171c; --card: #1e232b; --ink: #f2efe9; --muted: #aab2bd; --accent: #7fb2e5; --line: #2f3742; }
+  }
+  :root[data-theme="dark"] { --bg: #14171c; --card: #1e232b; --ink: #f2efe9; --muted: #aab2bd; --accent: #7fb2e5; --line: #2f3742; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Microsoft JhengHei', 'Noto Sans TC', sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; box-sizing: border-box; }
+  h1 { font-size: 26px; margin: 12px 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-weight: 700; margin-bottom: 8px; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 88px; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font-family: inherit; }
+  .btns { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button { flex: 1; min-width: 140px; font-size: 17px; font-weight: 700; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  .result { word-break: break-all; font-size: 16px; margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line); display: none; }
+  .result.show { display: block; }
+  .note { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>小工具庫</h1>
+
+  <div class="card">
+    <label for="input">貼上網址</label>
+    <textarea id="input" placeholder="https://..." inputmode="url"></textarea>
+    <div class="btns">
+      <button id="addParam" type="button">加參數 openExternalBrowser=1</button>
+      <button id="shorten" type="button" class="ghost">縮網址</button>
+    </div>
+    <div id="result" class="result" role="status"></div>
+    <div class="btns">
+      <button id="copy" type="button" class="ghost" style="display:none">複製結果</button>
+    </div>
+    <p id="fallback" class="note" style="display:none"></p>
+  </div>
+
+  <p class="note">加參數：在網址後面加上 openExternalBrowser=1，讓 LINE 用手機預設瀏覽器開啟。<br>縮網址：使用 TinyURL 服務，網址會送到 TinyURL。</p>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const resultBox = $('result');
+  const copyBtn = $('copy');
+  const fallback = $('fallback');
+
+  function toUrl(raw) {
+    const s = raw.trim().match(/https?:\/\/\S+/)?.[0];
+    if (!s) return null;
+    try { return new URL(s); } catch { return null; }
+  }
+
+  function show(text) {
+    resultBox.textContent = text;
+    resultBox.classList.add('show');
+    copyBtn.style.display = '';
+    copyBtn.dataset.value = text;
+  }
+
+  function clearFallback() {
+    fallback.style.display = 'none';
+    fallback.textContent = '';
+  }
+
+  function notValid() {
+    clearFallback();
+    resultBox.classList.remove('show');
+    copyBtn.style.display = 'none';
+    fallback.style.display = '';
+    fallback.textContent = '請貼上以 http:// 或 https:// 開頭的完整網址。';
+  }
+
+  $('addParam').addEventListener('click', () => {
+    const url = toUrl($('input').value);
+    if (!url) return notValid();
+    url.searchParams.set('openExternalBrowser', '1');
+    clearFallback();
+    show(url.toString());
+  });
+
+  $('shorten').addEventListener('click', async () => {
+    const url = toUrl($('input').value);
+    if (!url) return notValid();
+    clearFallback();
+    show('縮網址中…');
+    try {
+      const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url.toString()));
+      const text = (await res.text()).trim();
+      if (!res.ok || !text.startsWith('https://tinyurl.com/')) throw new Error('bad response');
+      show(text);
+    } catch {
+      resultBox.classList.remove('show');
+      copyBtn.style.display = 'none';
+      fallback.style.display = '';
+      fallback.innerHTML = '縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://tinyurl.com/app" target="_blank" rel="noopener">TinyURL 官網</a> 自己縮。';
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(copyBtn.dataset.value || '');
+      copyBtn.textContent = '已複製';
+      setTimeout(() => { copyBtn.textContent = '複製結果'; }, 1500);
+    } catch {
+      copyBtn.textContent = '複製失敗，請長按結果';
+    }
+  });
+</script>
+</body>
+</html>
