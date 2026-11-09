@@ -15,16 +15,16 @@
   h1 { font-size: 26px; margin: 12px 0 16px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
   label { display: block; font-weight: 700; margin-bottom: 8px; }
-  .inputrow { display: flex; gap: 10px; align-items: stretch; }
+  .inputrow, .resultrow { display: flex; gap: 10px; align-items: flex-start; }
   textarea { flex: 1; min-width: 0; box-sizing: border-box; min-height: 88px; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font-family: inherit; }
-  .side { display: flex; flex-direction: column; gap: 10px; }
-  .icon { width: 52px; min-width: 52px; flex: none; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+  .icon { width: 52px; height: 52px; min-width: 52px; flex: none; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 2px solid var(--accent); color: var(--accent); }
   .icon svg { width: 24px; height: 24px; }
   .btns { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   button { flex: 1; min-width: 140px; font-size: 17px; font-weight: 700; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer; }
   button.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
-  .result { word-break: break-all; font-size: 16px; margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line); display: none; }
-  .result.show { display: block; }
+  .result { flex: 1; min-width: 0; min-height: 52px; box-sizing: border-box; word-break: break-all; font-size: 16px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--line); }
+  .result:empty::before { content: '結果會顯示在這裡'; color: var(--muted); }
+  .resultrow { margin-top: 12px; }
   .note { color: var(--muted); font-size: 14px; line-height: 1.6; }
   a { color: var(--accent); }
 </style>
@@ -37,20 +37,20 @@
     <label for="input">貼上網址</label>
     <div class="inputrow">
       <textarea id="input" placeholder="https://..." inputmode="url"></textarea>
-      <div class="side">
-        <button id="paste" type="button" class="icon" aria-label="貼上" title="貼上">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 12h6M9 16h4"/></svg>
-        </button>
-        <button id="copy" type="button" class="icon" aria-label="複製" title="複製">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-        </button>
-      </div>
+      <button id="paste" type="button" class="icon" aria-label="貼上" title="貼上">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 12h6M9 16h4"/></svg>
+      </button>
     </div>
     <div class="btns">
       <button id="addParam" type="button">加外部參數</button>
       <button id="shorten" type="button" class="ghost">縮網址</button>
     </div>
-    <div id="result" class="result" role="status"></div>
+    <div class="resultrow">
+      <div id="result" class="result" role="status"></div>
+      <button id="copy" type="button" class="icon" aria-label="複製" title="複製">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      </button>
+    </div>
     <p id="fallback" class="note" style="display:none"></p>
   </div>
 
@@ -84,13 +84,11 @@
   function show(text) {
     lastResult = text;
     resultBox.textContent = text;
-    resultBox.classList.add('show');
   }
 
   function clearResult() {
     lastResult = '';
     resultBox.textContent = '';
-    resultBox.classList.remove('show');
   }
 
   function notValid() {
