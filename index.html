@@ -54,7 +54,7 @@
     <p id="fallback" class="note" style="display:none"></p>
   </div>
 
-  <p class="note">加外部參數：在網址後面加上 openExternalBrowser=1，讓 LINE 用手機預設瀏覽器開啟。<br>縮網址：使用 TinyURL 服務，網址會送到 TinyURL。<br>複製：有結果就複製結果，沒有結果就複製輸入的內容。</p>
+  <p class="note">加外部參數：在網址後面加上 openExternalBrowser=1，讓 LINE 用手機預設瀏覽器開啟。<br>縮網址：使用 is.gd 服務，網址會送到 is.gd。<br>複製：有結果就複製結果，沒有結果就複製輸入的內容。</p>
 </main>
 
 <script>
@@ -132,13 +132,13 @@
     clearFallback();
     show('縮網址中…');
     try {
-      const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url.toString()));
+      const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url.toString()));
       const text = (await res.text()).trim();
-      if (!res.ok || !text.startsWith('https://tinyurl.com/')) throw new Error('bad response');
+      if (!res.ok || !text.startsWith('https://is.gd/')) throw new Error('bad response');
       show(text);
     } catch {
       clearResult();
-      showFallback('縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://tinyurl.com/app" target="_blank" rel="noopener">TinyURL 官網</a> 自己縮。');
+      showFallback('縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://is.gd/" target="_blank" rel="noopener">is.gd 官網</a> 自己縮。');
     }
   });
 </script>
