@@ -30,7 +30,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;top:8px;right:12px;font-size:12px;color:var(--muted)">v1.5 · 2026-11-09</div>
+<div style="position:fixed;top:8px;right:12px;font-size:12px;color:var(--muted)">v1.6 · 2026-11-18</div>
 <main>
   <h1>小工具庫</h1>
 
@@ -65,6 +65,13 @@
   const fallback = $('fallback');
   const copyBtn = $('copy');
   let lastResult = '';
+
+  const IS_GD_ERRORS = {
+    1: '網址格式不正確',
+    2: '網址格式不正確',
+    3: '短時間內請求太多次，請稍後再試',
+    4: '縮網址服務發生錯誤，請稍後再試',
+  };
 
   function toUrl(raw) {
     const s = raw.trim().match(/https?:\/\/\S+/)?.[0];
@@ -132,15 +139,28 @@
     if (!url) return notValid();
     clearFallback();
     show('縮網址中…');
+
+    let res;
     try {
-      const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url.toString()));
-      const text = (await res.text()).trim();
-      if (!res.ok || !text.startsWith('https://is.gd/')) throw new Error('bad response');
-      show(text);
+      res = await fetch('https://is.gd/create.php?format=json&url=' + encodeURIComponent(url.toString()));
+    } catch (e) {
+      clearResult();
+      return showFallback(`縮網址失敗：連線錯誤（${e.message}）。可能是網路不通，或瀏覽器擋下跨網站請求。可以到 <a href="https://is.gd/" target="_blank" rel="noopener">is.gd 官網</a> 自己縮。`);
+    }
+
+    let data;
+    try {
+      data = await res.json();
     } catch {
       clearResult();
-      showFallback('縮網址失敗（瀏覽器可能擋下跨網站請求）。可以到 <a href="https://is.gd/" target="_blank" rel="noopener">is.gd 官網</a> 自己縮。');
+      return showFallback(`縮網址失敗：is.gd 回傳的不是 JSON（HTTP ${res.status}）。`);
     }
+
+    if (data.shorturl) return show(data.shorturl);
+
+    clearResult();
+    const msg = data.errormessage || IS_GD_ERRORS[data.errorcode] || '未知錯誤';
+    showFallback(`縮網址失敗：${msg}（is.gd 錯誤代碼 ${data.errorcode ?? '-'}，HTTP ${res.status}）。`);
   });
 </script>
 </body>
